@@ -1,0 +1,13 @@
+Utils/__pycache__/
+Utils/delete.py
+Utils/Input_Utils.py
+Utils/OneTreePoset.py
+outputs/
+optimalsol/
+inputs/
+.vscode/
+__pycache__
+try_heuristic.py
+analysis/
+optsol/
+optsol_try.py
