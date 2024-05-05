@@ -104,6 +104,7 @@ with open(f'optsol/trees/{args[1]}treesoptsol.txt', 'r') as optimal_file, open(f
             output.write("Analysis: FEASIBLE - NOT OPTIMAL\n")
             output.write("(Optimal) Linear Extensions Covered:\n")
 
+            print("Input: "+ str(input))
             print("(Optimal) Linear Extensions Covered:")
             for sol1 in O_sol:
                 output.write(str(sol1)+": "+str(get_linear_extensions(sol1))+"\n")

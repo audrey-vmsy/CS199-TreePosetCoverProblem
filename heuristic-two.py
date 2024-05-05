@@ -75,12 +75,13 @@ with open(f'optsol/inputs/{args[1]}treesinput.txt', 'r') as input_file, open(f'o
 
         # for each group, there is a set of posets
         # append each poset to the list posets
+        
         for group in groupings:
             group = form_transposition_graph(group)
             poset_group = TreePoset(group)
             for poset in poset_group:
                 posets.append(poset)
-
+        
         if posets != None:
             output_file.write(f"Input: {[int(x) for x in inputLinearOrders]}\n")
             for i in range(len(posets)):
