@@ -127,6 +127,7 @@ with open(f'optsol/trees/{args[1]}treesoptsol.txt', 'r') as optimal_file, open(f
             output.write("(Heuristic) Linear Extensions Covered:\n")
             for sol2 in H_sol:
                 output.write(str(sol2)+": "+str(get_linear_extensions(sol2))+"\n")
+            #form_transposition_graph([str(i) for i in input])
         output.write("\n")
 
     if len(not_optimal) == 0:

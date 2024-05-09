@@ -9,7 +9,7 @@ def binaryRelation(input):
     for linear_order in input:
         binaryRel = linear_order_to_binary_relation(linear_order)
         # poset = Poset(binaryRel, linear_order)
-        P.append(binaryRel)
+        P += binaryRel
     return P
 
 # given a linear order, get its corresponding binary relation
@@ -23,6 +23,7 @@ def linear_order_to_binary_relation(order):
         for j in range(i+1, n):
             relation.append((int(order[i]), int(order[j])))
     relation = sorted(relation, key=lambda x: (x[0], x[1]))  # Sort the relation in ascending order
+
     return relation
 
 # Example usage:
@@ -30,6 +31,24 @@ def linear_order_to_binary_relation(order):
 # relation = linear_order_to_binary_relation(order)
 # print(relation)
 
+def binaryToCover(P,n):
+    coverRelations = []
+    for (u,v) in P:
+        if (u,v) in coverRelations:
+            continue
+        if len(coverRelations) == n - 1:
+            break
+        transitive = False
+        for w in range(1, n+1):
+            if w == u or w == v:
+                continue
+            else:
+                if (u,w) in P and (w,v) in P:
+                    transitive = True
+                    break
+        if not transitive:
+            coverRelations.append((u,v))
+    return sorted(coverRelations)
 
 # returns True if (b, x) not in P1 and (a, x) not in P2
 def checkerTail(P1, P2, a, b):
@@ -205,6 +224,58 @@ def combinePosetv2(P1, P2):
 # else:
 #     print("No returned poset")
 
+def gen_tree_poset(upsilon):    
+    Ptree = []
+    m = len(upsilon)     
+    n = len(upsilon[0])
+
+    minRank = [0 for i in range(n)]
+    numCoverRelation = 0
+    coverRelationP = []
+
+    nextset = False
+    canBeImproved = True
+    while canBeImproved:
+        canBeImproved = False
+        nextset = False
+        for h in range(m, 0, -1):
+            if nextset:
+                break
+            for i in range(1,n):
+                for j in range(h):
+                    v2 = rankInverse(i, upsilon[j])
+                    if minRank[int(v2)-1] == 0:
+                        v1 = rankInverse(i-1, upsilon[j])
+                        coverRelationP.append((int(v1),int(v2)))
+                        minRank[int(v2)-1] = i
+                        minRank[int(v1)-1] = i-1
+                        numCoverRelation +=1
+                if numCoverRelation == n-1:
+                    P = get_linear_extensions(coverRelationP)
+                    if VERIFY(P, upsilon[:h]):
+                        Ptree.append(coverRelationP)
+                        upsilon = upsilon[h:]
+                        if len(upsilon) > 0:
+                            m = len(upsilon)     
+                            n = len(upsilon[0])
+                        minRank = [0 for i in range(n)]
+                        numCoverRelation = 0
+                        coverRelationP = []
+                        nextset = True
+                        if len(upsilon) < 1:
+                            canBeImproved = False
+                        else:
+                            canBeImproved = True
+                        break
+                    else:
+                        minRank = [0 for i in range(n)]
+                        numCoverRelation = 0
+                        coverRelationP = []
+                        break
+
+    # if VERIFY(P, upsilon):
+    return Ptree
+
 def get_linear_extensions(cover_relation):
     # Create a directed graph from the cover relation
     G = nx.DiGraph()
@@ -236,7 +307,6 @@ def group_linearOrders_by_its_root(upsilon):
             grouped_upsilon[root] = [linearOrder]
     
     return list(grouped_upsilon.values())
-
 
 def form_transposition_graph(upsilon):
     G = nx.Graph()
