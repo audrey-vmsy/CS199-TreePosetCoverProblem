@@ -35,10 +35,12 @@ def TreePoset(upsilon):
                      upsilon[a][0:i]+upsilon[a][i+2:len(upsilon[a])] == upsilon[b][0:i]+upsilon[b][i+2:len(upsilon[b])]]
             if len(pairs)>0:
                 G.add_edge(upsilon[a], upsilon[b], label=str(sorted([pairs[0][0],pairs[0][1]])))
-                Edges[upsilon[a]].append([tuple(sorted((pairs[0][0],pairs[0][1]))), upsilon[b]])
-                Edges[upsilon[b]].append([tuple(sorted((pairs[0][0],pairs[0][1]))), upsilon[a]])
+                Edges[upsilon[a]].append([tuple(sorted((int(pairs[0][0]),int(pairs[0][1])))), upsilon[b]])
+                Edges[upsilon[b]].append([tuple(sorted((int(pairs[0][0]),int(pairs[0][1])))), upsilon[a]])
                 #print("Nodes", upsilon[a], upsilon[b])
                 #print("Added edge/s", pairs)
+
+    #print(Edges)
 
     # Form Tree Posets
     while len(nodes)>0:
@@ -87,20 +89,29 @@ def TreePoset(upsilon):
 
             i = 1
             for potentials in potentialNodes:
-                tempNodes = [n for n in list(set(curP + binaryRelation(potentials[1]))) if n not in remEdges+[potentials[0], (potentials[0][1], potentials[0][0])]]
-                #print("tempNodes =", tempNodes)
-                #print("edge to extend from =", potentials[0])
-                #print("new nodes =", potentials[1])
+                pairsToRemove = [potentials[0],(potentials[0][1], potentials[0][0])]
+                nodesToAdd = potentials[1]
+                if len(potentials[1])==2:
+                    #print("shortest path =",nx.shortest_path(G, source=potentials[1][0], target=potentials[1][1]))
+                    nodesToAdd = nx.shortest_path(G, source=potentials[1][0], target=potentials[1][1])
+                    pairsToRemove += [Edges[l][x][0] for l in nodesToAdd for x in range(len(Edges[l])) if l not in potentials[1]]
+                    pairsToRemove = list(set(pairsToRemove))
 
+                tempNodes = [n for n in list(set(curP + binaryRelation(nodesToAdd))) if n not in remEdges+pairsToRemove and (n[1],n[0]) not in remEdges+pairsToRemove]
+                #print("tempNodes =", tempNodes)
+                #print("edge to extend from =", pairsToRemove)
+                #print("new nodes =", nodesToAdd)
+
+                #print(binaryToCover(tempNodes,len(upsilon[0])))
                 P = get_linear_extensions(binaryToCover(tempNodes,len(upsilon[0])))
                 #print("P =",P)
-                #print("Potential new curLE =",curLE+[p for p in potentials[1] if p not in curLE])
-                if isTreePoset(tempNodes) and VERIFY(P, curLE+[p for p in potentials[1] if p not in curLE]):
+                #print("Potential new curLE =",curLE+[p for p in nodesToAdd if p not in curLE])
+                if isTreePoset(tempNodes) and VERIFY(P, curLE+[p for p in nodesToAdd if p not in curLE]):
                     #print("ACCEPTED")
                     curP = tempNodes
-                    curLE += [p for p in potentials[1] if p not in curLE]
+                    curLE += [p for p in nodesToAdd if p not in curLE]
                     nodes = [n for n in nodes if n not in curLE]
-                    remEdges += [potentials[0], (potentials[0][1], potentials[0][0])]
+                    remEdges += pairsToRemove
                     break
                 elif i>=len(potentialNodes):
                     #print("END OF LOOP")
@@ -108,7 +119,7 @@ def TreePoset(upsilon):
                 #else:
                     #print("REJECTED")
                     #print("P =",P)
-                    #print("Potential new curLE =",curLE+[p for p in potentials[1] if p not in curLE])
+                    #print("Potential new curLE =",curLE+[p for p in nodesToAdd if p not in curLE])
                     #print(input())
                 i += 1
             #print("OUT OF FOR LOOP")
