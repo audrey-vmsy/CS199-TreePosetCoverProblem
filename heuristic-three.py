@@ -10,7 +10,7 @@ import networkx as nx
 import pylab as p
 from collections import defaultdict, OrderedDict
 sys.path.append('Utils')
-from TreePoset_Utils_v2 import VERIFY, get_linear_extensions, rankInverse, group_linearOrders_by_its_root, binaryToCover, isTreePoset, binaryRelation
+from TreePoset_Utils_v2 import VERIFY, get_linear_extensions, group_linearOrders_by_its_root, binaryToCover, isTreePoset, binaryRelation, superCover
 
 args = sys.argv
 
@@ -37,99 +37,74 @@ def TreePoset(upsilon):
                 G.add_edge(upsilon[a], upsilon[b], label=str(sorted([pairs[0][0],pairs[0][1]])))
                 Edges[upsilon[a]].append([tuple(sorted((int(pairs[0][0]),int(pairs[0][1])))), upsilon[b]])
                 Edges[upsilon[b]].append([tuple(sorted((int(pairs[0][0]),int(pairs[0][1])))), upsilon[a]])
-                #print("Nodes", upsilon[a], upsilon[b])
-                #print("Added edge/s", pairs)
-
-    #print(Edges)
 
     # Form Tree Posets
     while len(nodes)>0:
-        #print("G nodes =", G.nodes)
         # Create list of neighbor nodes
         Neighbors = dict([])
         for n in list(G.nodes):
-            #print(n,"-", list(G.neighbors(n)))
             Neighbors[n]=list(G.neighbors(n))
         
-        #print(Neighbors)
-
-        # Obtain starting node
+        # Obtain starting node (node with least neighbors)
         numNeighbors = [[len(Neighbors[l]),l] for l in Neighbors]
         numNeighbors = sorted(numNeighbors, key = lambda l: l[0])
         startNode = numNeighbors[0][1]
 
-        # Initialize start values
-        curLE = [startNode]
-        curP = binaryRelation([startNode])
-        remEdges = []
-
-        #print("startNode =",startNode)
+        # Initialize start values for traversal
+        curLE = [startNode] # list of Linear Extensions currently in poset
+        curP = binaryRelation([startNode]) # list of cover relations in current poset
+        remEdges = [] # list of edges/anchor pairs to remove from cover relations
 
         cond = 1
         while(cond):
-            #print("curLE = ", curLE)
-            #print("curP = ", curP)
-            # Obtain all edges connected to members of curLE and their connected nodes
+            # Obtain all edges/anchor pairs connected to members of curLE and their connected nodes
             potentialPairs = []
             potentialNodes = dict([])
             for node in curLE:
                 potentialPairs += [Edges[node][n] for n in range(len(Edges[node])) 
                                 if Edges[node][n][1] in nodes]
                 for pair in potentialPairs:
-                    #print("pair =", pair)
                     id = tuple(sorted([int(p) for p in pair[0]]))
                     if potentialNodes.get(id)==None:
                         potentialNodes[id] = [pair[1]]
                     elif pair[1] not in potentialNodes[id]:
                         potentialNodes[id] += [pair[1]]
 
-            # Sort potential extensions by frequency  
+            # Sort potential extensions by frequency from greatest to least 
             potentialNodes = sorted(potentialNodes.items(), key=lambda x: len(x[1]), reverse=True)
-            #print("sorted potential nodes =", potentialNodes)
 
+            # Check potential anchor pairs to extend to
             i = 1
             for potentials in potentialNodes:
                 pairsToRemove = [potentials[0],(potentials[0][1], potentials[0][0])]
                 nodesToAdd = potentials[1]
-                if len(potentials[1])==2:
-                    #print("shortest path =",nx.shortest_path(G, source=potentials[1][0], target=potentials[1][1]))
-                    nodesToAdd = nx.shortest_path(G, source=potentials[1][0], target=potentials[1][1])
+                # If a potential mirror has more than 1 node, include convex of mirror
+                if len(potentials[1])>1:
+                    mirrors = [set(binaryRelation([x])) for x in potentials[1]] # list of sets of cover relations of each potential node to add from mirror
+                    nodesToAdd += [s for s in superCover(mirrors, list(G.nodes)) if s not in nodesToAdd] # list of valid nodes to extend from if convex exists
                     pairsToRemove += [Edges[l][x][0] for l in nodesToAdd for x in range(len(Edges[l])) if l not in potentials[1]]
                     pairsToRemove = list(set(pairsToRemove))
 
-                tempNodes = [n for n in list(set(curP + binaryRelation(nodesToAdd))) if n not in remEdges+pairsToRemove and (n[1],n[0]) not in remEdges+pairsToRemove]
-                #print("tempNodes =", tempNodes)
-                #print("edge to extend from =", pairsToRemove)
-                #print("new nodes =", nodesToAdd)
+                # List of cover relations to potentially add to poset
+                tempNodes = [n for n in list(set(curP + binaryRelation(nodesToAdd))) if n not in remEdges+pairsToRemove and (n[1],n[0]) not in remEdges+pairsToRemove+curP]
 
-                #print(binaryToCover(tempNodes,len(upsilon[0])))
+                # Check if tree poset can be formed and if it will cover the input 
                 P = get_linear_extensions(binaryToCover(tempNodes,len(upsilon[0])))
-                #print("P =",P)
-                #print("Potential new curLE =",curLE+[p for p in nodesToAdd if p not in curLE])
+                # If the poset is valid, add node/s and continue traversal
                 if isTreePoset(tempNodes) and VERIFY(P, curLE+[p for p in nodesToAdd if p not in curLE]):
-                    #print("ACCEPTED")
                     curP = tempNodes
                     curLE += [p for p in nodesToAdd if p not in curLE]
                     nodes = [n for n in nodes if n not in curLE]
                     remEdges += pairsToRemove
                     break
+                # If none of the potential node/s yield a valid tree poset, end traversal and continue with remaining graph
                 elif i>=len(potentialNodes):
-                    #print("END OF LOOP")
                     cond = 0
-                #else:
-                    #print("REJECTED")
-                    #print("P =",P)
-                    #print("Potential new curLE =",curLE+[p for p in nodesToAdd if p not in curLE])
-                    #print(input())
                 i += 1
-            #print("OUT OF FOR LOOP")
 
+            # If there are no potential nodes to extend to, end traversal and continue with remaining graph
             if len(potentialNodes)==0:
                 cond=0
-
-        #print("nodes =", nodes)
-        #print("curLE = ", curLE)
-        #print("G nodes =",G.nodes)
 
         '''
         # For drawing the transposition graphs
@@ -137,20 +112,22 @@ def TreePoset(upsilon):
         nx.draw_networkx(G, pos, with_labels=True,font_size=10, node_size=500, node_color='#9CE5FF')
         nx.draw_networkx_edge_labels(G, pos, edge_labels=nx.get_edge_attributes(G,'label'))
 
-        p.show()'''
-        nodes = [n for n in nodes if n not in curLE]
+        p.show()
+        '''
 
+        nodes = [n for n in nodes if n not in curLE]
+        
+        # Remove nodes added to a tree poset from graph
         for le in curLE:
             G.remove_node(le)
 
+        # Add poset to poset tree, start over with remaining graph
         Ptree.append(curP)
-
-    #print("Ptree =", Ptree)
     
+    # Return list of tree posets found
     return Ptree
 
 count = 1
-#with open(f'inputs/{args[1]}.txt', 'r') as input_file, open(f'outputs/output_{args[1]}.txt', 'w') as output_file:
 with open(f'optsol/inputs/{args[1]}treesinput.txt', 'r') as input_file, open(f'outputs/output_{args[1]}.txt', 'w') as output_file:
     for line in input_file: # work on each test case
         print(count)
@@ -160,8 +137,6 @@ with open(f'optsol/inputs/{args[1]}treesinput.txt', 'r') as input_file, open(f'o
         inputLinearOrders.sort()
         inputLinearOrders = [str(item) for item in inputLinearOrders]
 
-        #print("Input: ", inputLinearOrders)
-        
         posets = []
         # group linear orders according to their root
         groupings = group_linearOrders_by_its_root(inputLinearOrders)

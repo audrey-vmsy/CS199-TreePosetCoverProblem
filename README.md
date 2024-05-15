@@ -26,7 +26,7 @@ Furthermore, we empirically evaluate the performance of Heuristic 1 and Heuristi
     ```
 2. Generate heuristic solutions on the input file (choose either heuristic-one or heuristic-two)
     ```python
-    python heuristic-<one/two>.py <vertex count*>
+    python heuristic-<one/two/three>.py <vertex count*>
     ```
 3. Generate analysis of optimal and heuristic solutions
     ```python

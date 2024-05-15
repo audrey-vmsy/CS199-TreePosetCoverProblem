@@ -400,6 +400,11 @@ def form_transposition_graph(upsilon):
         p.show()
     return nodes
   
+def superCover(mirrors, upsilon):
+    P = set.intersection(*mirrors)
 
-
+    if set(get_linear_extensions(binaryToCover(P,len(upsilon[0])))) <= set(upsilon):
+        return get_linear_extensions(binaryToCover(P,len(upsilon[0])))
+    else:
+        return []
 
